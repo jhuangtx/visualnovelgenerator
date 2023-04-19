@@ -3,7 +3,7 @@ import os
 import requests
 import re
 import config
-from function_holder import generate_content, generate_image, num_tokens_from_string, post_process_dialogue, extract_character_names
+from function_holder import generate_content, generate_image, num_tokens_from_string, post_process_dialogue, extract_character_names, analyze_sentiment_and_update_profile
 
 def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt=None,character_profiles=None, enable_image_generator=False):
     # Read the script template from the uploaded file or use the default file
@@ -99,7 +99,7 @@ def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt
         print(f"Tokens from json: {pt}, {ct}, {tt}")
 
         generated_dialogues.append((character_profile['name'], generated_dialogue))
-        # analyze_sentiment_and_update_profile(generated_dialogue, character_profile)
+        analyze_sentiment_and_update_profile(generated_dialogue, character_profile)
         previous_dialogue = f"{character_profile['name']}: {generated_dialogue}"
         previous_character_name = character_profiles[character_name]['name']  # Add this line to store the previous character's name
         character_index = (character_index + 1) % len(character_order)

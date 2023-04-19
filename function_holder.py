@@ -57,3 +57,21 @@ def extract_character_names(template):
             character_name = line.split("]: ")[0].strip()[1:]
             character_names.add(character_name)
     return list(character_names)
+
+def analyze_sentiment_and_update_profile(dialogue, character_profile):
+    sentiment_prompt = f"Identify the likes and dislikes expressed in the following dialogue: '{dialogue}'. Please list them in the format 'likes: item1, item2; dislikes: item3, item4'. If there are no likes or dislikes, just mention 'none'."
+    
+    sentiment_response = generate_content(sentiment_prompt)
+    
+    if "likes" in sentiment_response.lower():
+        liked_items = re.search(r"likes: (.+?);", sentiment_response, re.IGNORECASE)
+        if liked_items:
+            liked_items = liked_items.group(1).strip().split(', ')
+            if not any(re.match(r"none.*", item, re.IGNORECASE) for item in liked_items):
+                character_profile["likes"].extend(liked_items)
+    if "dislikes" in sentiment_response.lower():
+        disliked_items = re.search(r"dislikes: (.+?)(;|$)", sentiment_response, re.IGNORECASE)
+        if disliked_items:
+            disliked_items = disliked_items.group(1).strip().split(', ')
+            if not any(re.match(r"none.*", item, re.IGNORECASE) for item in disliked_items):
+                character_profile["dislikes"].extend(disliked_items)
