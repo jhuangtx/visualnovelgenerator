@@ -1,0 +1,87 @@
+<div class="modal fade" id="bookModal" tabindex="-1" role="dialog" aria-labelledby="bookModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content" id="modal-content">
+      <!-- Modal content will be loaded dynamically -->
+    </div>
+  </div>
+</div>
+
+<script>
+  function onReadButtonClick(button, dialogues, title, imageUrl) {
+    const characterImages = {
+      Alice: '/static/alice.png',
+      Bob: '/static/bob.png',
+      Carol: '/static/carol.png',
+      Dave: '/static/dave.png'
+    };
+    const pages = dialogues.split(/(?:;)(?=\w+:)/).map(dialogue => dialogue.split(/:(.+)/));
+
+    let modalContent = `
+    <div class="modal-header">
+      <h5 class="modal-title" id="modal-dialog-title" style="display: none;">${title}</h5>
+      <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="book-page" style="display:none;">
+        <h3>${title}</h3>
+        <img src="${imageUrl}" alt="${title}" class="title-page-image">
+</div>`;
+    pages.forEach(page => {
+      const characterName = page[0].trim();
+      const imageUrl = characterImages[characterName] || ''; // Get image URL or use empty string if not found
+      modalContent += `
+      <div class="book-page" style="display:none;">
+        <img src="${imageUrl}" alt="${characterName}" class="character-image">
+        <p><strong>${characterName}:</strong> ${page[1]}</p>
+      </div>`;
+    });
+    modalContent += `
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="prevPage()">Previous</button>
+      <button type="button" class="btn btn-primary" onclick="nextPage()">Next</button>
+    </div>`;
+    $("#modal-content").html(modalContent);
+    initializeBook();
+    $('#bookModal').modal('show');
+  }
+
+  function initializeBook() {
+    let currentPage = 0;
+    const pages = document.getElementsByClassName("book-page");
+    function updatePageDisplay() {
+      for (let i = 0; i < pages.length; i++) {
+        pages[i].style.display = i === currentPage ? "block" : "none";
+      }
+      // Show the h5 title if it's not the first page, hide it otherwise
+      document.getElementById("modal-dialog-title").style.display = currentPage !== 0 ? "block" : "none";
+    }
+
+    function prevPage() {
+      if (currentPage > 0) {
+        currentPage--;
+        updatePageDisplay();
+      }
+    }
+
+    function nextPage() {
+      if (currentPage < pages.length - 1) {
+        currentPage++;
+        updatePageDisplay();
+      }
+    }
+
+    updatePageDisplay();
+
+    window.prevPage = prevPage;
+    window.nextPage = nextPage;
+  }
+
+  $(document).ready(function () {
+    $('#bookModal').on('hidden.bs.modal', function () {
+      $("#bookModal .modal-content").empty();
+    });
+  });
+</script>

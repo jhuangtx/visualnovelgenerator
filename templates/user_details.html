@@ -1,0 +1,17 @@
+{% extends "index.html" %}
+
+{% block content %}
+  <h2>User Details</h2>
+  <form method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="userImage">Upload your image</label>
+      <input type="file" class="form-control-file" id="userImage" name="user_image">
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+  </form>
+  <div class="mt-4">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <!-- Add a link to the non-existent billing page -->
+    <a href="#" class="ml-4">Billing</a>
+  </div>
+{% endblock %}

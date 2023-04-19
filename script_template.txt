@@ -1,0 +1,10 @@
+Title: [Show Title]
+Episode: [Episode Title]
+
+[Character 1]: [Dialogue 1]
+[Character 2]: [Dialogue 2]
+[Character 3]: [Dialogue 3]
+[Character 4]: [Dialogue 4]
+[Character 1]: [Dialogue 5]
+[Character 2]: [Dialogue 6]
+

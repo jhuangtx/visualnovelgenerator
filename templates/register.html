@@ -1,0 +1,43 @@
+{% extends "index.html" %}
+
+{% block content %}
+<script>
+    function submitForm(event) {
+        event.preventDefault();
+        const form = event.target;
+
+        fetch('{{ url_for("register") }}', {
+            method: 'POST',
+            body: new FormData(form)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                location.href = '{{ url_for("login") }}';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+</script>
+
+<h2>Register</h2>
+<form onsubmit="submitForm(event)">
+    <div class="form-group">
+        <label for="username">Username:</label>
+        <input type="text" class="form-control" id="username" name="username" required>
+    </div>
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+    </div>
+    <div class="form-group">
+        <label for="secret_access_code">Secret Access Code:</label>
+        <input type="text" class="form-control" id="secret_access_code" name="secret_access_code" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Register</button>
+</form>
+{% endblock %}

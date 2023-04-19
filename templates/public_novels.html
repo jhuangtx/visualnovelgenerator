@@ -1,0 +1,29 @@
+{% extends "index.html" %}
+
+{% block content %}
+  <h1>Public Visual Novels</h1>
+  <div class="row mt-5">
+    {% for visual_novel in public_novels %}
+      <div class="col-md-4">
+        <div class="card">
+          <img src="{{ visual_novel.image_url }}" class="card-img-top" alt="Book Thumbnail">
+          <div class="card-body">
+            <h5 class="card-title">{{ visual_novel.title }}</h5>
+            <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, {{ visual_novel.image_url|tojson }})'>Read</button>          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="modal fade" id="bookModal" tabindex="-1" role="dialog" aria-labelledby="bookModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content" id="modal-content">
+        <!-- Modal content will be loaded dynamically -->
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {% include 'novel.html' %}
+{% endblock %}
