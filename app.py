@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from secrets import token_hex
 from datetime import datetime  # Add this import to the top of your app.py file
 import os, sys
 import json
@@ -123,11 +124,13 @@ def view_novel(novel_id):
 @app.route('/dashboard')
 @login_required
 def dashboard():
+    csrf_token = token_hex(16)  # Generate a 32-character CSRF token
+    session['csrf_token'] = csrf_token  # Store the token in the session
     visual_novels = db.session.query(VisualNovel, User)\
         .join(User, User.id == VisualNovel.user_id)\
         .filter(User.id==current_user.id)\
         .all()
-    return render_template('dashboard.html', visual_novels=visual_novels)
+    return render_template('dashboard.html', visual_novels=visual_novels, csrf_token=csrf_token)  # Pass csrf_token to the template
 
 @app.route('/public_novels')
 def public_novels():
