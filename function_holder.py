@@ -3,6 +3,7 @@ import tiktoken
 import config
 import re
 import requests
+import os
 
 # Set your OpenAI API key
 openai.api_key = config.openai_api_key
@@ -61,6 +62,10 @@ def extract_character_names(template):
 
 def save_image(url, file_path):
     response = requests.get(url)
+
+    # Create the directories if they don't exist
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
     with open(file_path, "wb") as file:
         file.write(response.content)
 

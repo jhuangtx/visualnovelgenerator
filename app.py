@@ -94,11 +94,10 @@ def generate_visual_novel():
 
     title = request.form.get('title')  # Use get instead of ['title']
 
-    character_profiles = json.loads(request.form.get('character_profiles', '{}'))  # New line to receive character profiles
     # print(character_profiles)
     # print('STOP HERE')
     # sys.exit()
-    show_title, generated_dialogues_tuples, image_url, character_urls = generate_script(title_prompt=title,character_profiles=character_profiles)
+    show_title, generated_dialogues_tuples = generate_script(title_prompt=title)
 
     dialogues_str = ';'.join([f"{dialogue_tuple[0]}:{dialogue_tuple[1]}" for dialogue_tuple in generated_dialogues_tuples])
 
@@ -108,9 +107,7 @@ def generate_visual_novel():
         user_id=current_user.id,
         user_agent=request.headers.get('User-Agent'),
         ip_address=request.remote_addr,
-        location="Unknown",  # Replace with actual location data if available
-        image_url=image_url,
-        character_urls=json.dumps(character_urls)
+        location="Unknown"  # Replace with actual location data if available
     )
     db.session.add(visual_novel)
     db.session.commit()
@@ -126,13 +123,20 @@ def view_novel(novel_id):
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    visual_novels = VisualNovel.query.filter_by(user_id=current_user.id).all()
+    visual_novels = db.session.query(VisualNovel, User)\
+        .join(User, User.id == VisualNovel.user_id)\
+        .filter(User.id==current_user.id)\
+        .all()
     return render_template('dashboard.html', visual_novels=visual_novels)
 
 @app.route('/public_novels')
 def public_novels():
-    public_novels = VisualNovel.query.filter_by(private=False).all()
+    public_novels = db.session.query(VisualNovel, User)\
+        .join(User, User.id == VisualNovel.user_id)\
+        .filter(VisualNovel.private==False)\
+        .all()
     return render_template('public_novels.html', public_novels=public_novels)
+
 
 @app.route('/generator')
 def generator():

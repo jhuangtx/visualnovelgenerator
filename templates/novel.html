@@ -7,7 +7,7 @@
 </div>
 
 <script>
-  function onReadButtonClick(button, dialogues, title, imageUrl) {
+  function onReadButtonClick(button, dialogues, title, imageUrl, createdBy, createdDate) {
     const characterImages = {
       Alice: '/static/alice.png',
       Bob: '/static/bob.png',
@@ -26,7 +26,8 @@
     <div class="modal-body">
       <div class="book-page" style="display:none;">
         <h3>${title}</h3>
-        <img src="${imageUrl}" alt="${title}" class="title-page-image">
+        <img src="/static/novels/${title}/cover.png" alt="${title}" class="title-page-image">
+        <p>Created by: ${createdBy}<br>Created on: ${createdDate.slice(0, 10)}</p>
 </div>`;
     pages.forEach(page => {
       const characterName = page[0].trim();

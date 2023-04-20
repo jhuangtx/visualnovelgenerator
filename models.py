@@ -18,7 +18,7 @@ class VisualNovel(db.Model):
     private = db.Column(db.Boolean, default=False)
     dialogues = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_dt = db.Column(db.DateTime, default=datetime.utcnow)
     user_agent = db.Column(db.String, nullable=True)
     ip_address = db.Column(db.String, nullable=True)
     location = db.Column(db.String, nullable=True)

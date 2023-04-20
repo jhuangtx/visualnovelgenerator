@@ -113,7 +113,7 @@ def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt
     print(character_profiles)
     print(character_urls)
     title_url = generate_image(show_title)  # Call the generate_image() function
-    save_image(title_url, f"images/{show_title}/cover.png")
+    save_image(title_url, f"static/novels/{show_title}/cover.png")
     print(f"Estimated total tokens used: {estimated_total_tokens}")
     print(f"Actual total tokens used: {actual_total_tokens}")
     return show_title, generated_dialogues
