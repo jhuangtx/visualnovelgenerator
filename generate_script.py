@@ -3,8 +3,9 @@ import os
 import requests
 import re
 import config
-from function_holder import generate_content, generate_image, num_tokens_from_string, post_process_dialogue, extract_character_names, analyze_sentiment_and_update_profile
+from function_holder import generate_content, generate_image, num_tokens_from_string, post_process_dialogue, extract_character_names, analyze_sentiment_and_update_profile, save_image
 
+# change enable_image_generator to turn it on for characters
 def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt=None,character_profiles=None, enable_image_generator=False):
     # Read the script template from the uploaded file or use the default file
     if uploaded_script_template:
@@ -36,7 +37,7 @@ def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt
             character_url = generate_image(image_prompt)
             character_urls[character_name] = character_url
     else:
-        image_url = None
+        title_url = None
         character_urls = {character_name: None for character_name in character_profiles}
 
     # Extract character order from the script_template
@@ -99,7 +100,7 @@ def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt
         print(f"Tokens from json: {pt}, {ct}, {tt}")
 
         generated_dialogues.append((character_profile['name'], generated_dialogue))
-        analyze_sentiment_and_update_profile(generated_dialogue, character_profile)
+        # analyze_sentiment_and_update_profile(generated_dialogue, character_profile)
         previous_dialogue = f"{character_profile['name']}: {generated_dialogue}"
         previous_character_name = character_profiles[character_name]['name']  # Add this line to store the previous character's name
         character_index = (character_index + 1) % len(character_order)
@@ -111,9 +112,10 @@ def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt
     print(script_template)
     print(character_profiles)
     print(character_urls)
-    # image_url = generate_image(show_title)  # Call the generate_image() function
+    title_url = generate_image(show_title)  # Call the generate_image() function
+    save_image(title_url, f"images/{show_title}/cover.png")
     print(f"Estimated total tokens used: {estimated_total_tokens}")
     print(f"Actual total tokens used: {actual_total_tokens}")
-    return show_title, generated_dialogues, image_url, character_urls
+    return show_title, generated_dialogues
 
-generate_script()
+#generate_script()

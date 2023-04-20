@@ -22,5 +22,3 @@ class VisualNovel(db.Model):
     user_agent = db.Column(db.String, nullable=True)
     ip_address = db.Column(db.String, nullable=True)
     location = db.Column(db.String, nullable=True)
-    image_url = db.Column(db.String, nullable=True)
-    character_urls = db.Column(db.String, nullable=True)

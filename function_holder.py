@@ -2,6 +2,7 @@ import openai
 import tiktoken
 import config
 import re
+import requests
 
 # Set your OpenAI API key
 openai.api_key = config.openai_api_key
@@ -57,6 +58,11 @@ def extract_character_names(template):
             character_name = line.split("]: ")[0].strip()[1:]
             character_names.add(character_name)
     return list(character_names)
+
+def save_image(url, file_path):
+    response = requests.get(url)
+    with open(file_path, "wb") as file:
+        file.write(response.content)
 
 def analyze_sentiment_and_update_profile(dialogue, character_profile):
     sentiment_prompt = f"Identify the likes and dislikes expressed in the following dialogue: '{dialogue}'. Please list them in the format 'likes: item1, item2; dislikes: item3, item4'. If there are no likes or dislikes, just mention 'none'."

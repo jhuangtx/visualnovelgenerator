@@ -3,13 +3,13 @@
 {% block content %}
 <h1>Your Visual Novels</h1>
 <div class="row mt-5">
-  {% for visual_novel in visual_novels %}
+  {% for visual_novel in visual_novels|reverse %}
   <div class="col-md-4">
     <div class="card">
-      <img src="{{ visual_novel.image_url }}" class="card-img-top" alt="Visual Novel Thumbnail">
+      <img src="{{ url_for('static', filename=visual_novel.title + '/cover.png') }}" class="card-img-top" alt="Visual Novel Thumbnail">
       <div class="card-body">
         <h5 class="card-title">{{ visual_novel.title }}</h5>
-        <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, {{ visual_novel.image_url|tojson }})'>Read</button>        <a href="{{ url_for('edit_novel', novel_id=visual_novel.id) }}" class="btn btn-secondary">Edit</a>
+        <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, "{{ url_for('static', filename=visual_novel.title + '/cover.png') }}")'>Read</button>
       </div>
     </div>
   </div>
