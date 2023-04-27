@@ -1,18 +1,15 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, abort
 from secrets import token_hex
 from datetime import datetime  # Add this import to the top of your app.py file
 import os, sys
 import json
-from models import db, User, VisualNovel
-from generate_script import generate_script, post_process_dialogue
+from models import User, VisualNovel
+from generate_script import generate_script
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, LoginManager, login_user, logout_user, login_required, current_user
 
 app = Flask(__name__)
 app.secret_key = '501035'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///visual_novels.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -22,10 +19,7 @@ login_manager.login_view = 'login'
 # Define user loader function
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
-
-with app.app_context():
-    db.create_all()
+    return User.get(user_id)
 
 @app.route('/')
 def index():
@@ -40,14 +34,20 @@ def register():
         
         username = request.form['username']
         password = request.form['password']
+
+        existing_user = User.get_by_username(username)
+        if existing_user:
+            return jsonify({'error': 'Username already exists, please try another one'})
+
         hashed_password = generate_password_hash(password, method='sha256')
 
         # Add the created_at field when creating a new user instance
         user = User(username=username, password=hashed_password, created_at=datetime.utcnow())
+        user.save()
 
-        db.session.add(user)
-        db.session.commit()
-        return redirect(url_for('login'))
+        # Log the user in after successful registration
+        login_user(user)
+        return redirect(url_for('index'))
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -55,7 +55,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = User.query.filter_by(username=username).first()
+        user = User.get_by_username(username)
         if user and check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for('index'))
@@ -73,72 +73,84 @@ def logout():
 @login_required
 def save_novel():
     novel_id = request.form['novel_id']
-    novel = VisualNovel.query.get_or_404(novel_id)
+    novel = VisualNovel.get(novel_id)
     novel.user_id = current_user.id
-    novel.private = True if request.form.get('private') == 'on' else False
-    db.session.commit()
+    novel.private = request.form.get('private') == 'on'
+    novel.update({'private': novel.private})
     return redirect(url_for('view_novel', novel_id=novel.id))
 
 @app.route('/generate_visual_novel', methods=['POST'])
-@login_required  # Add the login_required decorator to ensure the user is logged in
+@login_required
 def generate_visual_novel():
-    # Define the cost per request
-    cost_per_request = 6
+    cost_per_request = 20
 
-    # Check if the user has enough tokens
     if current_user.tokens < cost_per_request:
         return jsonify({'error': 'insufficient_tokens'})
 
-    # Deduct tokens from the user's account
-    current_user.tokens -= cost_per_request
-    db.session.commit()
+    title = request.form.get('title')
 
-    title = request.form.get('title')  # Use get instead of ['title']
-
-    # print(character_profiles)
-    # print('STOP HERE')
-    # sys.exit()
-    show_title, generated_dialogues_tuples = generate_script(title_prompt=title)
+    try:
+        show_title, generated_dialogues_tuples, cover_image_key = generate_script(title_prompt=title, user_id=current_user.id)
+    except Exception as e:
+        app.logger.error(f"Error generating visual novel: {str(e)}")
+        return jsonify({'error': 'generation_failed'})
 
     dialogues_str = ';'.join([f"{dialogue_tuple[0]}:{dialogue_tuple[1]}" for dialogue_tuple in generated_dialogues_tuples])
 
     visual_novel = VisualNovel(
         title=title,
+        private=True,
         dialogues=dialogues_str,
         user_id=current_user.id,
         user_agent=request.headers.get('User-Agent'),
         ip_address=request.remote_addr,
-        location="Unknown"  # Replace with actual location data if available
+        location="Unknown",
+        created_dt=datetime.utcnow(),
+        cover_image_bucket='visualnovelimages',
+        cover_image_key=cover_image_key
     )
-    db.session.add(visual_novel)
-    db.session.commit()
+    visual_novel.save()
+
+    current_user.tokens -= cost_per_request
+    current_user.update({'tokens': current_user.tokens})
 
     return jsonify({'novel_id': visual_novel.id})
 
 @app.route('/view_novel/<int:novel_id>')
 def view_novel(novel_id):
-    visual_novel = VisualNovel.query.get_or_404(novel_id)
+    visual_novel = VisualNovel.get(novel_id)
     pages = [dialogue.split(':', 1) for dialogue in visual_novel.dialogues.split(';')]
     return render_template('novel.html', novel=visual_novel, pages=pages)
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    csrf_token = token_hex(16)  # Generate a 32-character CSRF token
-    session['csrf_token'] = csrf_token  # Store the token in the session
-    visual_novels = db.session.query(VisualNovel, User)\
-        .join(User, User.id == VisualNovel.user_id)\
-        .filter(User.id==current_user.id)\
-        .all()
-    return render_template('dashboard.html', visual_novels=visual_novels, csrf_token=csrf_token)  # Pass csrf_token to the template
+    csrf_token = token_hex(16)
+    session['csrf_token'] = csrf_token
+    visual_novels = VisualNovel.get_all_by_user_id(current_user.id)
+
+    cover_image_urls = []
+    for novel in visual_novels:
+        if isinstance(novel.cover_image_key, (str, bytes)):
+            cover_image_urls.append(f"https://{novel.cover_image_bucket}.s3.amazonaws.com/{novel.cover_image_key}")
+        else:
+            cover_image_urls.append(None)
+
+    return render_template('dashboard.html', visual_novels=visual_novels, csrf_token=csrf_token, user=current_user, cover_image_urls=cover_image_urls)  # Pass csrf_token, user and cover_image_urls to the template
 
 @app.route('/public_novels')
 def public_novels():
-    public_novels = db.session.query(VisualNovel, User)\
-        .join(User, User.id == VisualNovel.user_id)\
-        .filter(VisualNovel.private==False)\
-        .all()
-    return render_template('public_novels.html', public_novels=public_novels)
+    public_novels = VisualNovel.get_all_public()
+    public_novels_with_users = [(novel, User.get(novel.user_id)) for novel in public_novels]
+    cover_image_urls = []
+
+    for novel in public_novels:
+        if isinstance(novel.cover_image_key, (str, bytes)):
+            cover_image_urls.append(f"https://{novel.cover_image_bucket}.s3.amazonaws.com/{novel.cover_image_key}")
+        else:
+            cover_image_urls.append(None)
+    return render_template('public_novels.html', public_novels=public_novels_with_users, cover_image_urls=cover_image_urls)
+
 
 
 @app.route('/generator')
@@ -151,17 +163,18 @@ def generator():
     }
     return render_template('generator.html', default_character_profiles=json.dumps(default_character_profiles))
 
-@app.route('/edit_novel/<int:novel_id>', methods=['GET', 'POST'])
+@app.route('/edit_novel/<string:novel_id>', methods=['GET', 'POST'])
 @login_required
 def edit_novel(novel_id):
-    novel = VisualNovel.query.get_or_404(novel_id)
-
+    novel = VisualNovel.get(novel_id)
+    
     if request.method == 'POST':
-        novel.private = 'private' in request.form
-        db.session.commit()
+        # Use request.form.get() instead of 'private' in request.form
+        novel.private = request.form.get('private') == 'true'
+        novel.update({'private': novel.private})
         flash('Novel updated successfully.', 'success')
         return redirect(url_for('dashboard'))
-
+    
     return render_template('edit_novel.html', novel=novel)
 
 @app.route('/user_details', methods=['GET', 'POST'])

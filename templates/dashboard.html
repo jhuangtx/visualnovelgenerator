@@ -3,13 +3,13 @@
 {% block content %}
 <h1>Your Visual Novels</h1>
 <div class="row mt-5">
-  {% for visual_novel, user in visual_novels|reverse %}
+  {% for visual_novel in visual_novels|reverse %}
   <div class="col-md-4">
     <div class="card">
-      <img src="{{ url_for('static', filename='novels/' + visual_novel.title + '/cover.png') }}" class="card-img-top" alt="Visual Novel Thumbnail">
+      <img src="{{ cover_image_urls[loop.index0] }}" class="card-img-top" alt="Visual Novel Thumbnail">
       <div class="card-body">
         <h5 class="card-title">{{ visual_novel.title }}</h5>
-        <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, "{{ url_for('static', filename=visual_novel.title + '/cover.png') }}", "{{ user.username }}", "{{ visual_novel.created_dt.strftime("%Y-%m-%d") }}")'>Read</button>
+        <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, "{{ cover_image_urls[loop.index0] }}", "{{ user.username }}", "{{ visual_novel.created_dt if visual_novel.created_dt else "" }}")'>Read</button>
         <button type="button" class="btn btn-primary edit-btn" data-novel-id="{{ visual_novel.id }}" data-novel-private="{{ visual_novel.private }}"onclick='onEditButtonClick(this, {{ visual_novel.id|tojson }}, {{ visual_novel.private|tojson }})'>Edit</button>
       </div>
     </div>
@@ -52,32 +52,36 @@
   </script>
   <script>
     function onEditButtonClick(button, novelId, novelPrivate) {
-      $("#edit-novel-form #private").prop("checked", novelPrivate);
-      $("#editModal").modal("show");
-    
-      $("#save-changes-btn").off("click").on("click", function () {
-        const isPrivate = $("#edit-novel-form #private").is(":checked");
-        const data = { private: isPrivate };
-        const csrfToken = "{{ csrf_token }}";
-        const url = "{{ url_for('edit_novel', novel_id=0) }}".replace("/0", `/${novelId}`);
-        
-        $.ajax({
-          url: url,
-          method: "POST",
-          data: JSON.stringify(data),
-          contentType: "application/json",
-          beforeSend: function (xhr) {
-            xhr.setRequestHeader("X-CSRFToken", csrfToken);
-          },
-          success: function () {
-            $("#editModal").modal("hide");
-            window.location.reload();
-          },
-          error: function () {
-            alert("Error: Failed to save changes.");
-          },
-        });
+  $("#edit-novel-form #private").prop("checked", JSON.parse(novelPrivate));
+  $("#editModal").modal("show");
+
+    $("#save-changes-btn").off("click").on("click", function () {
+      const isPrivate = $("#edit-novel-form #private").prop("checked");
+      const csrfToken = "{{ csrf_token }}";
+      const url = "{{ url_for('edit_novel', novel_id=0) }}".replace("/0", `/${novelId}`);
+      
+      // Use form data instead of JSON
+      const formData = new FormData();
+      formData.append("private", isPrivate);
+      
+      $.ajax({
+        url: url,
+        method: "POST",
+        data: formData, // Pass the form data object
+        contentType: false, // Set contentType to false for form data
+        processData: false, // Set processData to false for form data
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("X-CSRFToken", csrfToken);
+        },
+        success: function () {
+          $("#editModal").modal("hide");
+          window.location.reload();
+        },
+        error: function () {
+          alert("Error: Failed to save changes.");
+        },
       });
-    }
+    });
+  }
   </script>
 {% endblock %}

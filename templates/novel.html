@@ -1,11 +1,3 @@
-<div class="modal fade" id="bookModal" tabindex="-1" role="dialog" aria-labelledby="bookModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content" id="modal-content">
-      <!-- Modal content will be loaded dynamically -->
-    </div>
-  </div>
-</div>
-
 <script>
   function onReadButtonClick(button, dialogues, title, imageUrl, createdBy, createdDate) {
     const characterImages = {
@@ -26,7 +18,7 @@
     <div class="modal-body">
       <div class="book-page" style="display:none;">
         <h3>${title}</h3>
-        <img src="/static/novels/${title}/cover.png" alt="${title}" class="title-page-image">
+        <img src="${imageUrl}" alt="${title}" class="title-page-image">
         <p>Created by: ${createdBy}<br>Created on: ${createdDate.slice(0, 10)}</p>
 </div>`;
     pages.forEach(page => {

@@ -1,12 +1,12 @@
-import openai
-import os
 import requests
 import re
-import config
-from function_holder import generate_content, generate_image, num_tokens_from_string, post_process_dialogue, extract_character_names, analyze_sentiment_and_update_profile, save_image
+from function_holder import generate_content, generate_image, num_tokens_from_string, post_process_dialogue, extract_character_names, analyze_sentiment_and_update_profile, save_image_to_s3
 
 # change enable_image_generator to turn it on for characters
-def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt=None,character_profiles=None, enable_image_generator=False):
+def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt=None,character_profiles=None, enable_image_generator=False, user_id=None):
+
+    print("generate_script is being executed")
+
     # Read the script template from the uploaded file or use the default file
     if uploaded_script_template:
         script_template = uploaded_script_template.read().decode("utf-8")
@@ -75,29 +75,26 @@ def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt
         next_character_profile = character_profiles[next_character_name] # Add this line to get the next character's profile
 
         if i == 0:
-            dialogue_prompt = f"Generate a short dialogue line for {character_name} in a coffeeshop where they share their interests, or ask a question about someones interests or life. Enclose dialog in []"
-        elif i<num_dialogues - 1:
-            print(f"Previous dialogue: {previous_dialogue}")
-
-            dialogue_prompt = f"Generate a short dialogue line for {character_name} in a coffeeshop where they respond to the previous dialogue: \"{previous_dialogue}\". Enclose dialog in []"
+        #     dialogue_prompt = f"Generate a short dialogue line for {character_name} in a coffeeshop where they share their interests, or ask a question about someones interests or life. Enclose dialog in []"
+        # elif i<num_dialogues - 1:
+        #     dialogue_prompt = f"Generate a short dialogue line for {character_name} in a coffeeshop where they respond to the previous dialogue: \"{previous_dialogue}\". Enclose dialog in []"
+        # else:
+        #     dialogue_prompt = f"Generate a short dialogue line for {character_name} in a coffeeshop where they respond to the previous dialogue: \"{previous_dialogue}\". This is the last line. Enclose dialog in []"
+            dialogue_prompt = f"Context: You are a character in a show. Show title: {show_title}. Generate an opening dialogue line to for {character_name} where they talk about their interests, life, or ask a question to another character. Enclose dialog in []"
+        elif i < num_dialogues - 1:
+            dialogue_prompt = f"Context:\nYou are a character, {character_name}, in a show called: {show_title}\nPrevious dialogue: {previous_dialogue}\nPrompt Instruction: Generate a dialogue line. If the previous speaker asked you a question, respond to them (if you respond to previous character, use their name which is {previous_character_name}). To continue the conversation, ask another question or talk about something related to {show_title} If you do ask a follow up question, ask it to the next speaker and mention their name, {next_character_profile['name']}. Enclose dialog in []"
         else:
-            print(f"Previous dialogue: {previous_dialogue}")
+            dialogue_prompt = f"Context:\nYou are a character, {character_name}, in a show called: {show_title}\nPrevious dialogue: {previous_dialogue}\nPrompt Instruction: Generate the last dialogue line. If the previous speaker asked you a question, you can answer it or provide a closing statement or remark to wrap up the conversation. Enclose dialog in []"
 
-            dialogue_prompt = f"Generate a short dialogue line for {character_name} in a coffeeshop where they respond to the previous dialogue: \"{previous_dialogue}\". This is the last line. Enclose dialog in []"
-   
         # Add the following lines before generating the dialogue
         prompt_tokens = num_tokens_from_string(dialogue_prompt, "cl100k_base")
-        print(f"Estimated Tokens used for prompt: {prompt_tokens}")
 
         # Generate the dialogue
         generate_dialogue, ct, pt, tt = generate_content(dialogue_prompt)
         dialogue_tokens = num_tokens_from_string(generate_dialogue, "cl100k_base")
-        print(f"Estimated tokens from generated dialog: {dialogue_tokens}")
 
         generated_dialogue = post_process_dialogue(generate_dialogue)
-        estimated_total_tokens += prompt_tokens + dialogue_tokens
         actual_total_tokens += pt + ct
-        print(f"Tokens from json: {pt}, {ct}, {tt}")
 
         generated_dialogues.append((character_profile['name'], generated_dialogue))
         # analyze_sentiment_and_update_profile(generated_dialogue, character_profile)
@@ -109,13 +106,8 @@ def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt
     for i, (character_name, dialogue) in enumerate(generated_dialogues, start=1):
         script_template = script_template.replace(f"[Dialogue {i}]", dialogue)
 
-    print(script_template)
-    print(character_profiles)
-    print(character_urls)
-    title_url = generate_image(show_title)  # Call the generate_image() function
-    save_image(title_url, f"static/novels/{show_title}/cover.png")
-    print(f"Estimated total tokens used: {estimated_total_tokens}")
-    print(f"Actual total tokens used: {actual_total_tokens}")
-    return show_title, generated_dialogues
+    title_url = generate_image(f"theme is {show_title}, book cover, cartoon, cute, digital art")  # Call the generate_image() function
+    s3_key = save_image_to_s3(title_url, user_id, show_title)
+    return show_title, generated_dialogues, s3_key
 
 #generate_script()

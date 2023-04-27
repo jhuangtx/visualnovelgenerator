@@ -1,12 +1,13 @@
+import os, re
 import openai
+import boto3
 import tiktoken
-import config
-import re
+from botocore.exceptions import NoCredentialsError
 import requests
-import os
+from typing import Tuple
 
 # Set your OpenAI API key
-openai.api_key = config.openai_api_key
+openai.api_key = os.environ['OPENAI_API_KEY']
 
 def num_tokens_from_string(string: str, encoding_name: str) -> int:
     """Returns the number of tokens in a text string."""
@@ -60,14 +61,27 @@ def extract_character_names(template):
             character_names.add(character_name)
     return list(character_names)
 
-def save_image(url, file_path):
-    response = requests.get(url)
+s3 = boto3.client('s3', region_name='us-east-1')
 
-    # Create the directories if they don't exist
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+def save_image_to_s3(url, user_id, show_title):
+    response = requests.get(url)
+    key = f"{user_id}/novels/{show_title}/cover.png"
+    s3.put_object(
+        Bucket='visualnovelimages',
+        Key=key,
+        Body=response.content,
+        ContentType='image/png'
+    )
+    return key
+
+# def save_image(url, file_path):
+#     response = requests.get(url)
+
+#     # Create the directories if they don't exist
+#     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     
-    with open(file_path, "wb") as file:
-        file.write(response.content)
+#     with open(file_path, "wb") as file:
+#         file.write(response.content)
 
 def analyze_sentiment_and_update_profile(dialogue, character_profile):
     sentiment_prompt = f"Identify the likes and dislikes expressed in the following dialogue: '{dialogue}'. Please list them in the format 'likes: item1, item2; dislikes: item3, item4'. If there are no likes or dislikes, just mention 'none'."

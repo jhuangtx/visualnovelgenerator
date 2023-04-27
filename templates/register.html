@@ -13,7 +13,11 @@
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                alert(data.error);
+                if (data.error === 'Username already exists, please try another one') {
+                    alert(data.error);
+                } else {
+                    alert(data.error);
+                }
             } else {
                 location.href = '{{ url_for("login") }}';
             }

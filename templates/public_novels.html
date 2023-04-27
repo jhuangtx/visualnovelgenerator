@@ -4,16 +4,13 @@
   <h1>Public Visual Novels</h1>
   <div class="row mt-5">
     {% for visual_novel, user in public_novels|reverse %}
-      <div class="col-md-4">
+    <div class="col-md-4">
         <div class="card">
-          <img src="{{ url_for('static', filename='novels/' + visual_novel.title + '/cover.png') }}" class="card-img-top" alt="Visual Novel Thumbnail">
+          <img src="{{ cover_image_urls[loop.index0] }}" class="card-img-top" alt="Visual Novel Thumbnail">
           <div class="card-body">
             <h5 class="card-title">{{ visual_novel.title }}</h5>
-            <p class="card-text">
-              Created by: {{ user.username }}<br>
-              Created on: {{ visual_novel.created_dt.strftime("%Y-%m-%d") }}
-            </p>
-            <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, "{{ url_for('static', filename=visual_novel.title + '/cover.png') }}", "{{ user.username }}", "{{ visual_novel.created_dt.strftime("%Y-%m-%d") }}")'>Read</button>
+
+            <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, "{{ cover_image_urls[loop.index0] }}", "{{ user.username }}", "{{ visual_novel.created_dt if visual_novel.created_dt else "" }}")'>Read</button>
           </div>
         </div>
       </div>
