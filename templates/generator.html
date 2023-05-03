@@ -2,81 +2,92 @@
 
 {% block content %}
 <h1>Visual Novel Generator</h1>
-<form action="/generate_visual_novel" method="post">
+<form id="generate-visual-novel-form">
+  <div class="form-group">
+    <label for="title">Enter a title:</label>
+    <input type="text" class="form-control" id="title" name="title" required>
+  </div>
+  <div id="extra_options" hidden="hidden">
     <div class="form-group">
-        <label for="title">Enter a title:</label>
-        <input type="text" class="form-control" id="title" name="title" required>
-    </div>
-    <div id="extra_options" hidden="hidden">
-        <div class="form-group">
-            <label for="num_characters">Number of characters (min: 1, max: 4):</label>
-            <input type="number" class="form-control" id="num_characters" name="num_characters" min="1" max="4" style="width: 70px;"">
+      <label for="num_characters">Number of characters (min: 1, max: 4):</label>
+      <input type="number" class="form-control" id="num_characters" name="num_characters" min="1" max="4"
+        style="width: 70px;"">
         </div>
         <div class=" form-group">
-            <label for="num_dialogs" data-min="6" data-max="12">Number of dialogs (min: 6, max: 12):</label>
-            <input type="number" class="form-control" id="num_dialogs" name="num_dialogs" min="6" max="12" step="1"
-                style="width: 70px;">
-        </div>
+      <label for="num_dialogs" data-min="6" data-max="12">Number of dialogs (min: 6, max: 12):</label>
+      <input type="number" class="form-control" id="num_dialogs" name="num_dialogs" min="6" max="12" step="1"
+        style="width: 70px;">
     </div>
-    <button type="submit" class="btn btn-primary">Generate Visual Novel</button>
-    <div id="loading-icon" style="display: none;">
-        <div class="spinner-border text-primary" role="status">
-          <span class="sr-only">Loading...</span>
-        </div>
-      </div>
+  </div>
+  <button type="submit" class="btn btn-primary">Generate Visual Novel</button>
+  <div id="error-message" class="alert alert-danger" role="alert" style="display: none;"></div>
+  <div id="loading-icon" class="loading-container">
+    <div class="spinner-grow text-primary" role="status"></div>
+    <span class="loading-text">Loading...</span>
+  </div>
+  <p class="text-muted">Note: Each successful generation will consume 20 tokens.</p>
 </form>
 <!-- Insufficient Tokens Modal -->
 <div class="modal" tabindex="-1" id="insufficient-tokens-modal">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Insufficient Tokens</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <p>You do not have enough tokens. Please purchase more tokens to continue.</p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary">Purchase More Tokens</button>
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        </div>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Insufficient Tokens</h5>
+        <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>You do not have enough tokens. Please purchase more tokens to continue.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary">Purchase More Tokens</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
 
 <script>
-     $(document).ready(function() {
-// Initialize the modal
-var modal = new bootstrap.Modal(document.getElementById('insufficient-tokens-modal'));
+  $(document).ready(function () {
+    var modal = new bootstrap.Modal(document.getElementById('insufficient-tokens-modal'));
 
-
-    $('form').on('submit', function(event) {
+    $("#generate-visual-novel-form").on("submit", function (event) {
       event.preventDefault();
+
+      const formData = new FormData(this);
+
       $.ajax({
-        url: '/generate_visual_novel',
-        method: 'POST',
-        data: $(this).serialize(),
+        url: "{{ url_for('generate_visual_novel') }}",
+        method: "POST",
+        data: formData,
+        contentType: false,
+        processData: false,
         beforeSend: function () {
-          // Show the loading icon only if there is no modal
-          if (!$('#insufficient-tokens-modal').hasClass('show')) {
-            $('#loading-icon').show();
+          $("#loading-icon").show();
+          $("#error-message").hide();
+        },
+        success: function (response) {
+          $("#loading-icon").hide();
+          if (response.error) {
+            if (response.error === 'insufficient_tokens') {
+              modal.show();
+            } else if (response.error === 'generation_failed') {
+              $("#error-message").text("An error occurred during the generation process. Please try again later.").show();
+            }
+          } else if (response.novel_id) {
+            let dashboard_url = "{{ url_for('dashboard') }}";
+            window.location.href = dashboard_url + "?novel_id=" + response.novel_id;
           }
         },
-        success: function(response) {
-          if (response.hasOwnProperty('error') && response.error === 'insufficient_tokens') {
-            // Show the Insufficient Tokens Modal
-            var modal = new bootstrap.Modal(document.getElementById('insufficient-tokens-modal'));
-            modal.show();
-            // Hide the loading icon
-            $('#loading-icon').hide();
-          } else {
-            // Redirect to the dashboard page with the novel ID
-            window.location.href = '/dashboard?novel_id=' + response.novel_id;
-          }
-        }
+        error: function () {
+          $("#loading-icon").hide();
+          $("#error-message").text("An error occurred while generating the visual novel. Please try again later.").show();
+        },
       });
     });
   });
 </script>
-  
 {% endblock %}

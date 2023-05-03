@@ -3,29 +3,27 @@
 {% block content %}
 <script>
     function submitForm(event) {
-        event.preventDefault();
-        const form = event.target;
+    event.preventDefault();
+    const form = event.target;
 
-        fetch('{{ url_for("register") }}', {
-            method: 'POST',
-            body: new FormData(form)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                if (data.error === 'Username already exists, please try another one') {
-                    alert(data.error);
-                } else {
-                    alert(data.error);
-                }
-            } else {
-                location.href = '{{ url_for("login") }}';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+    fetch('{{ url_for("register") }}', {
+        method: 'POST',
+        body: new FormData(form)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else if (data.success) {  // Add this condition
+            alert(data.success);
+            location.href = '{{ url_for("dashboard") }}';  // Redirect to the dashboard route
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
 </script>
 
 <h2>Register</h2>

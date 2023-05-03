@@ -1,6 +1,7 @@
 import os, re
 import openai
 import boto3
+import json
 import tiktoken
 from botocore.exceptions import NoCredentialsError
 import requests
@@ -15,19 +16,34 @@ def num_tokens_from_string(string: str, encoding_name: str) -> int:
     num_tokens = len(encoding.encode(string))
     return num_tokens
 
+# def generate_content(prompt):
+#     response = openai.Completion.create(
+#         engine="text-davinci-003",
+#         prompt=prompt,
+#         max_tokens=150,
+#         n=1,
+#         stop=None,
+#         temperature=0.8,
+#     )
+#     text = response.choices[0].text.strip()
+#     completion_tokens = response.usage.completion_tokens
+#     prompt_tokens = response.usage.prompt_tokens
+#     total_tokens = response.usage.total_tokens
+#     return text, completion_tokens, prompt_tokens, total_tokens
+
 def generate_content(prompt):
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=150,
-        n=1,
-        stop=None,
-        temperature=0.8,
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+    max_tokens=150,
+    n=1,
+    stop=None,
+    temperature=0.8,
     )
-    text = response.choices[0].text.strip()
-    completion_tokens = response.usage.completion_tokens
-    prompt_tokens = response.usage.prompt_tokens
-    total_tokens = response.usage.total_tokens
+    text = response['choices'][0]['message']['content'].strip()
+    completion_tokens = response['usage']['completion_tokens']
+    prompt_tokens = response['usage']['prompt_tokens']
+    total_tokens = response['usage']['total_tokens']
     return text, completion_tokens, prompt_tokens, total_tokens
 
 # Add a function to generate images using DALL-E
@@ -40,15 +56,11 @@ def generate_image(prompt, n=1, size="256x256"):
     return response['data'][0]['url']
 
 def post_process_dialogue(dialogue):
-    # Remove character number references
-    dialogue = re.sub(r'Character \d:', '', dialogue)
+    # Parse the JSON string
+    dialogue_json = json.loads(dialogue)
     
-    # Retrieve text between square brackets
-    dialogue = re.search(r'\[(.*?)\]', dialogue)
-    if dialogue:
-        dialogue = dialogue.group(1)
-    else:
-        dialogue = ""
+    # Retrieve the dialogue from the JSON object
+    dialogue = dialogue_json.get("dialogue", "")
         
     return dialogue.strip()
 

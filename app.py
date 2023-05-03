@@ -3,6 +3,7 @@ from secrets import token_hex
 from datetime import datetime  # Add this import to the top of your app.py file
 import os, sys
 import json
+import serverless_wsgi
 from models import User, VisualNovel
 from generate_script import generate_script
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -20,6 +21,10 @@ login_manager.login_view = 'login'
 @login_manager.user_loader
 def load_user(user_id):
     return User.get(user_id)
+
+# Add the lambda_handler function
+def lambda_handler(event, context):
+    return serverless_wsgi.handle_request(app, event, context)
 
 @app.route('/')
 def index():
@@ -47,7 +52,7 @@ def register():
 
         # Log the user in after successful registration
         login_user(user)
-        return redirect(url_for('index'))
+        return jsonify({'success': 'Registration successful. Redirecting to dashboard.'})  # Add this line
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -69,16 +74,6 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-@app.route('/save_novel', methods=['POST'])
-@login_required
-def save_novel():
-    novel_id = request.form['novel_id']
-    novel = VisualNovel.get(novel_id)
-    novel.user_id = current_user.id
-    novel.private = request.form.get('private') == 'on'
-    novel.update({'private': novel.private})
-    return redirect(url_for('view_novel', novel_id=novel.id))
-
 @app.route('/generate_visual_novel', methods=['POST'])
 @login_required
 def generate_visual_novel():
@@ -87,15 +82,16 @@ def generate_visual_novel():
     if current_user.tokens < cost_per_request:
         return jsonify({'error': 'insufficient_tokens'})
 
-    title = request.form.get('title')
+    title = request.form.get('title').title()
 
     try:
-        show_title, generated_dialogues_tuples, cover_image_key = generate_script(title_prompt=title, user_id=current_user.id)
+        show_title, generated_dialogues, cover_image_key = generate_script(title_prompt=title, user_id=current_user.id)
     except Exception as e:
         app.logger.error(f"Error generating visual novel: {str(e)}")
         return jsonify({'error': 'generation_failed'})
 
-    dialogues_str = ';'.join([f"{dialogue_tuple[0]}:{dialogue_tuple[1]}" for dialogue_tuple in generated_dialogues_tuples])
+    dialogues_str = json.dumps(generated_dialogues)
+
 
     visual_novel = VisualNovel(
         title=title,
@@ -119,7 +115,7 @@ def generate_visual_novel():
 @app.route('/view_novel/<int:novel_id>')
 def view_novel(novel_id):
     visual_novel = VisualNovel.get(novel_id)
-    pages = [dialogue.split(':', 1) for dialogue in visual_novel.dialogues.split(';')]
+    pages = [(dialogue['name'], dialogue['dialogue']) for dialogue in json.loads(visual_novel.dialogues)]
     return render_template('novel.html', novel=visual_novel, pages=pages)
 
 @app.route('/dashboard')
@@ -129,12 +125,12 @@ def dashboard():
     session['csrf_token'] = csrf_token
     visual_novels = VisualNovel.get_all_by_user_id(current_user.id)
 
-    cover_image_urls = []
+    cover_image_urls = {}
     for novel in visual_novels:
         if isinstance(novel.cover_image_key, (str, bytes)):
-            cover_image_urls.append(f"https://{novel.cover_image_bucket}.s3.amazonaws.com/{novel.cover_image_key}")
+            cover_image_urls[novel.id] = f"https://{novel.cover_image_bucket}.s3.amazonaws.com/{novel.cover_image_key}"
         else:
-            cover_image_urls.append(None)
+            cover_image_urls[novel.id] = None
 
     return render_template('dashboard.html', visual_novels=visual_novels, csrf_token=csrf_token, user=current_user, cover_image_urls=cover_image_urls)  # Pass csrf_token, user and cover_image_urls to the template
 
@@ -142,13 +138,14 @@ def dashboard():
 def public_novels():
     public_novels = VisualNovel.get_all_public()
     public_novels_with_users = [(novel, User.get(novel.user_id)) for novel in public_novels]
-    cover_image_urls = []
 
+    cover_image_urls = {}
     for novel in public_novels:
         if isinstance(novel.cover_image_key, (str, bytes)):
-            cover_image_urls.append(f"https://{novel.cover_image_bucket}.s3.amazonaws.com/{novel.cover_image_key}")
+            cover_image_urls[novel.id] = f"https://{novel.cover_image_bucket}.s3.amazonaws.com/{novel.cover_image_key}"
         else:
-            cover_image_urls.append(None)
+            cover_image_urls[novel.id] = None
+
     return render_template('public_novels.html', public_novels=public_novels_with_users, cover_image_urls=cover_image_urls)
 
 
@@ -186,5 +183,5 @@ def user_details():
     return render_template('user_details.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    app.run()
+    # app.run(debug=True)

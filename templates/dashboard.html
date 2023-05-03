@@ -6,11 +6,10 @@
   {% for visual_novel in visual_novels|reverse %}
   <div class="col-md-4">
     <div class="card">
-      <img src="{{ cover_image_urls[loop.index0] }}" class="card-img-top" alt="Visual Novel Thumbnail">
+      <img src="{{ cover_image_urls[visual_novel.id] }}" class="card-img-top" alt="Visual Novel Thumbnail">
       <div class="card-body">
         <h5 class="card-title">{{ visual_novel.title }}</h5>
-        <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, "{{ cover_image_urls[loop.index0] }}", "{{ user.username }}", "{{ visual_novel.created_dt if visual_novel.created_dt else "" }}")'>Read</button>
-        <button type="button" class="btn btn-primary edit-btn" data-novel-id="{{ visual_novel.id }}" data-novel-private="{{ visual_novel.private }}"onclick='onEditButtonClick(this, {{ visual_novel.id|tojson }}, {{ visual_novel.private|tojson }})'>Edit</button>
+        <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson|safe }}, {{ visual_novel.title|tojson }}, "{{ cover_image_urls[visual_novel.id] }}", "{{ user.username }}", "{{ visual_novel.created_dt if visual_novel.created_dt else "" }}", characterImages)'>Read</button>        <button type="button" class="btn btn-primary edit-btn" data-novel-id="{{ visual_novel.id }}" data-novel-private="{{ visual_novel.private }}"onclick='onEditButtonClick(this, {{ visual_novel.id|tojson }}, {{ visual_novel.private|tojson }})'>Edit</button>
       </div>
     </div>
   </div>
@@ -37,6 +36,14 @@
 {% block scripts %}
   {% include 'novel.html' %}
   <script>
+  // Create the characterImages object
+  const characterImages = {
+      'Alice': '{{ url_for("static", filename="alice.png") }}',
+      'Bob': '{{ url_for("static", filename="bob.png") }}',
+      'Carol': '{{ url_for("static", filename="carol.png") }}',
+      'Dave': '{{ url_for("static", filename="dave.png") }}'
+    };
+
     $(document).ready(function() {
       const urlParams = new URLSearchParams(window.location.search);
       const novelId = urlParams.get('novel_id');

@@ -6,23 +6,33 @@
   <title>Visual Novel Generator</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  
 </head>
 
 <body>
   <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="{{ url_for('index') }}"></a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+      aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon bi bi-list"></span>
+    </button>
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ml-auto">
         <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="{{ url_for('public_novels') }}">Public Novels</a>
         </li>
+        {% if current_user.is_authenticated %}
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('generator') }}">Generator</a>
         </li>
-        {% if current_user.is_authenticated %}
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
         </li>
@@ -33,12 +43,9 @@
           <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
         </li>
         <li class="nav-item">
-          <span class="nav-link">Tokens: {{ current_user.tokens }}</span>  <!-- Display token count -->
+          <span class="nav-link">Tokens: {{ current_user.tokens }}</span> <!-- Display token count -->
         </li>
         {% else %}
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('register') }}">Register</a>
-        </li>
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('login') }}">Login</a>
         </li>
@@ -53,14 +60,64 @@
     {% block content %}
     <h1 class="text-center">Welcome to Visual Novel Generator!</h1>
     <p class="text-center">Create and explore amazing visual novels with just a few clicks.</p>
+
+    <div class="row mt-4">
+      <div class="col-md-12">
+        <h2>About</h2>
+        <p>
+          Welcome to the Visual Novel Generator! This platform allows you to create your own visual novels by providing
+          a user-friendly interface and a powerful generator. Simply enter the title of your novel, define the
+          characters, and let our generator do the work! You can explore public novels created by other users or save
+          your own novels to your personal dashboard.
+          <br> <br>
+          <b><u>Limitations</u></b> <br>
+          Currently, you can only create a title and make your novel public or private. The 4 characters are static and
+          the dialogue order will always be Alice, Bob, Carol, Dave, Alice, Bob.
+          <br> <br>
+          Occasionally, the characters may get their names mixed up, refer to themselves as "Character," or will have
+          "undefined" dialogue. This will get fixed as the backend prompting behaviour is improved.
+
+          <br> <br>
+          <b><u>Update Roadmap</u></b> - each update will take some significant work<br>
+          1. Add simple style modifiers for cover images<br>
+          2. Add a "regenerate" step to each dialogue element/image.<br>
+          3. Add in your own characters and dialogue length<br>
+          4. Add in character personalization for image generation<br>
+          5. Improve character memory schema for longer books<br>
+          6. Allow scene additions to the script outside of dialogue<br>
+          7. Add in scene image creation based on multiple variables such as title, location, etc.<br>
+          8. Implement and bring together all the separate image generators to create a consistent character visuals, scenes, and action. 
+        </p>
+      </div>
+    </div>
+    <div class="row mt-4 justify-content-center">
+      <div class="col-md-12 text-center">
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('generator') }}" class="btn btn-primary">Start Generating</a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="btn btn-primary">Start Generating</a>
+        {% endif %}
+      </div>
+    </div>
     {% endblock %}
   </div>
-  
 
   <script src="{{ url_for('static', filename='main.js') }}"></script>
   <script src="{{ url_for('static', filename='ads.js') }}"></script>
   {% block scripts %}
   {% endblock %}
+
+  <script>
+    $(document).ready(function () {
+      var currentPath = window.location.pathname;
+      if (currentPath === '/') {
+        $("a[href='/']").addClass("active");
+      } else {
+        $("a[href='" + currentPath + "']").addClass("active");
+      }
+    });
+  </script>
+
 </body>
 
 </html>

@@ -1,45 +1,43 @@
 <script>
-  function onReadButtonClick(button, dialogues, title, imageUrl, createdBy, createdDate) {
-    const characterImages = {
-      Alice: '/static/alice.png',
-      Bob: '/static/bob.png',
-      Carol: '/static/carol.png',
-      Dave: '/static/dave.png'
-    };
-    const pages = dialogues.split(/(?:;)(?=\w+:)/).map(dialogue => dialogue.split(/:(.+)/));
+  function onReadButtonClick(button, dialogues, title, imageUrl, createdBy, createdDate, characterImages) {
+    console.log('onReadButtonClick called');
+  console.log(dialogues);
+  dialogues = JSON.parse(dialogues);
+  const pages = dialogues.map(dialogue => [dialogue.name, dialogue.dialogue]);
 
-    let modalContent = `
-    <div class="modal-header">
-      <h5 class="modal-title" id="modal-dialog-title" style="display: none;">${title}</h5>
-      <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="book-page" style="display:none;">
-        <h3>${title}</h3>
-        <img src="${imageUrl}" alt="${title}" class="title-page-image">
-        <p>Created by: ${createdBy}<br>Created on: ${createdDate.slice(0, 10)}</p>
-</div>`;
-    pages.forEach(page => {
-      const characterName = page[0].trim();
-      const imageUrl = characterImages[characterName] || ''; // Get image URL or use empty string if not found
-      modalContent += `
-      <div class="book-page" style="display:none;">
-        <img src="${imageUrl}" alt="${characterName}" class="character-image">
-        <p><strong>${characterName}:</strong> ${page[1]}</p>
-      </div>`;
-    });
+  let modalContent = `
+  <div class="modal-header">
+    <h5 class="modal-title" id="modal-dialog-title" style="display: none;">${title}</h5>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div class="book-page" style="display:none;">
+      <h3>${title}</h3>
+      <img src="${imageUrl}" alt="${title}" class="title-page-image">
+      <p>Created by: ${createdBy}<br>Created on: ${createdDate.slice(0, 10)}</p>
+  </div>`;
+  pages.forEach(page => {
+    const characterName = page[0].trim();
+    const imageUrl = characterImages[characterName] || ''; // Get image URL or use empty string if not found
     modalContent += `
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" onclick="prevPage()">Previous</button>
-      <button type="button" class="btn btn-primary" onclick="nextPage()">Next</button>
+    <div class="book-page" style="display:none;">
+      <img src="${imageUrl}" alt="${characterName}" class="character-image">
+      <p><strong>${characterName}:</strong> ${page[1]}</p>
     </div>`;
-    $("#modal-content").html(modalContent);
-    initializeBook();
-    $('#bookModal').modal('show');
-  }
+  });
+  modalContent += `
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" onclick="prevPage()">Previous</button>
+    <button type="button" class="btn btn-primary" onclick="nextPage()">Next</button>
+  </div>`;
+  $("#modal-content").html(modalContent);
+  initializeBook();
+  $('#bookModal').modal('show');
+}
+
 
   function initializeBook() {
     let currentPage = 0;

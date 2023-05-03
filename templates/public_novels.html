@@ -6,11 +6,11 @@
     {% for visual_novel, user in public_novels|reverse %}
     <div class="col-md-4">
         <div class="card">
-          <img src="{{ cover_image_urls[loop.index0] }}" class="card-img-top" alt="Visual Novel Thumbnail">
+          <img src="{{ cover_image_urls[visual_novel.id] }}" class="card-img-top" alt="Visual Novel Thumbnail">
           <div class="card-body">
             <h5 class="card-title">{{ visual_novel.title }}</h5>
 
-            <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, "{{ cover_image_urls[loop.index0] }}", "{{ user.username }}", "{{ visual_novel.created_dt if visual_novel.created_dt else "" }}")'>Read</button>
+            <button type="button" class="btn btn-primary read-btn" data-novel-id="{{ visual_novel.id }}"onclick='onReadButtonClick(this, {{ visual_novel.dialogues|tojson }}, {{ visual_novel.title|tojson }}, "{{ cover_image_urls[visual_novel.id] }}", "{{ user.username }}", "{{ visual_novel.created_dt if visual_novel.created_dt else "" }}")'>Read</button>
           </div>
         </div>
       </div>

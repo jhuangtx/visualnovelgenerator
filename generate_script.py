@@ -1,5 +1,6 @@
 import requests
 import re
+import json
 from function_holder import generate_content, generate_image, num_tokens_from_string, post_process_dialogue, extract_character_names, analyze_sentiment_and_update_profile, save_image_to_s3
 
 # change enable_image_generator to turn it on for characters
@@ -53,7 +54,7 @@ def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt
     else:
         show_title_prompt = "Sun, Sand, and Friends"
 
-    show_title = show_title_prompt
+    show_title = show_title_prompt.title()
 
     # Replace placeholders with the generated content
     script_template = script_template.replace("[Show Title]", show_title)
@@ -80,34 +81,87 @@ def generate_script(num_dialogues=6, uploaded_script_template=None, title_prompt
         #     dialogue_prompt = f"Generate a short dialogue line for {character_name} in a coffeeshop where they respond to the previous dialogue: \"{previous_dialogue}\". Enclose dialog in []"
         # else:
         #     dialogue_prompt = f"Generate a short dialogue line for {character_name} in a coffeeshop where they respond to the previous dialogue: \"{previous_dialogue}\". This is the last line. Enclose dialog in []"
-            dialogue_prompt = f"Context: You are a character in a show. Show title: {show_title}. Generate an opening dialogue line to for {character_name} where they talk about their interests, life, or ask a question to another character. Enclose dialog in []"
+            dialogue_prompt = f"""Context: 1) You are a character: {character_profile['name']}, in a short show titled: {show_title} 
+            
+                Rules:
+                1) Do not explicitly mention the title of the show in the dialogue.
+
+                Instruction:
+                1) Generate an opening dialogue line where you talk about your interests, life, or ask a question to another character (relevant to the show title) in json format.
+                2) Format: {{"Index": "{i}", "name": "{character_profile['name']}", "dialogue": "[Dialogue line here]"}}
+                3) Review your dialogue to ensure it fits within the rules and if not, edit it to follow them.
+                """
         elif i < num_dialogues - 1:
-            dialogue_prompt = f"Context:\nYou are a character, {character_name}, in a show called: {show_title}\nPrevious dialogue: {previous_dialogue}\nPrompt Instruction: Generate a dialogue line. If the previous speaker asked you a question, respond to them (if you respond to previous character, use their name which is {previous_character_name}). To continue the conversation, ask another question or talk about something related to {show_title} If you do ask a follow up question, ask it to the next speaker and mention their name, {next_character_profile['name']}. Enclose dialog in []"
+            dialogue_prompt = f"""Context: 1) You are a character: {character_profile['name']}, in a short show titled: {show_title} 
+                2) Previous dialogue: {previous_dialogue}
+                3) Previous speaker: {previous_character_name}
+                4) Next speaker: {next_character_profile['name']} 
+
+                Rules: 
+                1) If the previous speaker asked you a question, respond to them but do not respond with a follow-up question if they are not the next speaker.
+                2) To continue the conversation, ask another query or change the topic in a natural and conversational way (relevant to the show title). 
+                3) If the dialogue contains another query, make sure to direct it to the "Next Speaker" and explicitly mention their name.
+                4) Do not explicitly mention the title of the show in the dialogue.
+
+                Instruction: 
+                1) Analyze the previous dialogue. 
+                2) Generate a responsive dialogue in json format.
+                3) Format: {{"Index": "{i}", "name": "{character_profile['name']}", "dialogue": "[Dialogue line here]"}}
+                4) Review your dialogue to ensure it fits within the rules and if not, edit it to follow them.
+                """
         else:
-            dialogue_prompt = f"Context:\nYou are a character, {character_name}, in a show called: {show_title}\nPrevious dialogue: {previous_dialogue}\nPrompt Instruction: Generate the last dialogue line. If the previous speaker asked you a question, you can answer it or provide a closing statement or remark to wrap up the conversation. Enclose dialog in []"
+            dialogue_prompt = f"""Context: 
+                1) You are a character: {character_profile['name']}, in a short show titled: {show_title} 
+                2) Previous Dialogue: {previous_dialogue}
+                3) Previous Speaker: {previous_character_name}
+                
+                Rules: 
+                1) If the previous speaker asked you a question, you can answer it or provide a closing statement or remark to wrap up the conversation (relevant to the show title).
+                2) Do not explicitly mention the title of the show in the dialogue.
+
+                Instruction: 
+                1) Analyze the previous dialogue. 
+                2) Generate a responsive last dialogue line in json format. 
+                3) Format: {{"Index": "{i}", "name": "{character_profile['name']}", "dialogue": "[Dialogue line here]"}}
+                4) Review your dialogue to ensure it fits within the rules and if not, edit it to follow them.
+                """
 
         # Add the following lines before generating the dialogue
         prompt_tokens = num_tokens_from_string(dialogue_prompt, "cl100k_base")
 
         # Generate the dialogue
-        generate_dialogue, ct, pt, tt = generate_content(dialogue_prompt)
-        dialogue_tokens = num_tokens_from_string(generate_dialogue, "cl100k_base")
+        generated_dialogue_str, ct, pt, tt = generate_content(dialogue_prompt)
+        generated_dialogue = json.loads(generated_dialogue_str)
+        # dialogue_tokens = num_tokens_from_string(generated_dialogue, "cl100k_base")
 
-        generated_dialogue = post_process_dialogue(generate_dialogue)
         actual_total_tokens += pt + ct
 
-        generated_dialogues.append((character_profile['name'], generated_dialogue))
+        print({character_profile['name']})
+        print(f"Dialogue: {generated_dialogue}")
+        print(f"Only dialogue: {generated_dialogue['dialogue']}")
+        print(f"ct: {ct}")
+        print(f"pt: {pt}")
+        print(f"tt: {tt}")
+
+        generated_dialogues.append(generated_dialogue)
         # analyze_sentiment_and_update_profile(generated_dialogue, character_profile)
         previous_dialogue = f"{character_profile['name']}: {generated_dialogue}"
         previous_character_name = character_profiles[character_name]['name']  # Add this line to store the previous character's name
         character_index = (character_index + 1) % len(character_order)
 
     # Replace dialogues in the script template
-    for i, (character_name, dialogue) in enumerate(generated_dialogues, start=1):
-        script_template = script_template.replace(f"[Dialogue {i}]", dialogue)
+    for i, dialogue in enumerate(generated_dialogues):
+        script_template = script_template.replace(f"[Dialogue {i+1}]", dialogue['dialogue'])
 
-    title_url = generate_image(f"theme is {show_title}, book cover, cartoon, cute, digital art")  # Call the generate_image() function
+
+    title_url = generate_image(f"theme is {show_title}, cinematic background, Kyoto animation, digital art, hi def, no people")  # Call the generate_image() function
     s3_key = save_image_to_s3(title_url, user_id, show_title)
+    # return show_title, generated_dialogues, s3_key
+    print(f"Generated Dialogues:\n{generated_dialogues}")
+    
+    print(f"Script template:\n{script_template}")
+    print(f"Actual Total Tokens:\n{actual_total_tokens}")
     return show_title, generated_dialogues, s3_key
 
-#generate_script()
+# generate_script()
+
